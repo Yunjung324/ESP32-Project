@@ -69,8 +69,8 @@ void wifitest() {
 void setup() {
   rtc.halt(false);
   rtc.writeProtect(true);
-  //rtc.setDate(27,5,2022);
-  //rtc.setTime(15,13,30);
+  //rtc.setDate(28,5,2022);
+  //rtc.setTime(15,53,16);
   dht.begin();
   lcd.begin(16,2);
   Serial.begin(9600);
@@ -79,7 +79,23 @@ void setup() {
   delay(300);
   wifitest();
   delay(300);
-  //checkin();
+  String b = "AT+HTTPCLIENT=3,0,\"";
+  b += "http://52.192.183.203/checkin.php\""; //url
+  b += ",\"";
+  b += "http://52.192.183.203\""; //host
+  b += ",\"";
+  b += "/checkin.php\""; //path
+  b += ",1,\""; //transport type
+  b += "mac=111133335555";
+  b += "&ver=20170131";
+  b += "&model=RN400H2PS";
+  b += "&ip=192.168.100.11";
+  b += "&splrate=60"; //측정 주기
+  b += "&interval=60"; //서버 전송 주기
+  b += "&tags=TEMP|HUMI";
+  b += "\"";
+    
+  esp32.println(b);
 }
 
 void loop() {
@@ -106,15 +122,12 @@ void loop() {
   lcd.print(strTemp);
   lcd.setCursor(11, 1);
   lcd.print("*C");
-  
-  //현재 시간을 UNIX 시간으로 변환
+
   t = rtc.getTime();
-  
+
   stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
   uint32_t current_unix = stamp.getUnix();
   String strTime = String(current_unix);
-  
-  //데이터인
   String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
   cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
   cmd += ",1,";
