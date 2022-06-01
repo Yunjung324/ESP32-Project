@@ -6,6 +6,7 @@
 #include <DS1302.h>
 #include <TimeLib.h>
 #include <UnixTime.h>
+#include <EEPROM.h>
 
 #define DHTTYPE DHT22
 
@@ -20,6 +21,10 @@ Time t;
 const String ssid = "iptime";
 const String password = "";
 
+uint32_t value_read;
+float temp_read;
+float humi_read;
+  
 //AT 명령어 작동 테스트
 void cmdtest() {
   esp32.println("AT");
@@ -45,27 +50,6 @@ void wifitest() {
   }
 }
 
-//체크인
-//void checkin() {
-  //String cmd = "AT+HTTPCLIENT=3,0,\"";
-  //cmd += "http://52.192.183.203/checkin.php\""; //url
-  //cmd += ",\"";
-  //cmd += "http://52.192.183.203\""; //host
-  //cmd += ",\"";
-  //cmd += "/checkin.php\""; //path
-  //cmd += ",1,\""; //transport type
-  //cmd += "mac=111133335555";
-  //cmd += "&ver=20170131";
-  //cmd += "&model=RN400H2PS";
-  //cmd += "&ip=192.168.100.11";
-  //cmd += "&splrate=60"; //측정 주기
-  //cmd += "&interval=60"; //서버 전송 주기
-  //cmd += "&tags=TEMP|HUMI";
-  //cmd += "\"\n";
-    
-  //esp32.print(cmd);
-//}
-
 void setup() {
   rtc.halt(false);
   rtc.writeProtect(true);
@@ -79,6 +63,7 @@ void setup() {
   delay(300);
   wifitest();
   delay(300);
+  //Checkin 구현
   String b = "AT+HTTPCLIENT=3,0,\"";
   b += "http://52.192.183.203/checkin.php\""; //url
   b += ",\"";
@@ -93,54 +78,134 @@ void setup() {
   b += "&splrate=60"; //측정 주기
   b += "&interval=60"; //서버 전송 주기
   b += "&tags=TEMP|HUMI";
-  b += "\"";
-    
+  b += "\""; 
   esp32.println(b);
+  //내부 메모리 초기화
+  for(int i = 0; i < 1024; i++){
+    EEPROM.write(i, 0);
+  }
 }
 
 void loop() {
-  delay(300);
-  
-  float humi = dht.readHumidity();
-  float temp = dht.readTemperature();
+  //Wifi 연결이 제대로 되어있나 확인
+  esp32.println("AT+CWSTATE?");
+  delay(100);
+  if(esp32.find("2")){//연결이 제대로 되어있으면
+    if(EEPROM.read(0) != 0){//내부 메모리에 값이 저장되어있으면
+      for(int i = 0; i < 1013; i = i + 12){
+        //내부메모리에 저장된 값 전송
+        EEPROM.get(i, value_read);
+        EEPROM.get(i + 4, temp_read);
+        EEPROM.get(i + 8, humi_read);
 
-  //온습도 값 전달을 위해 문자형으로 변환
-  char x[16];
+        char x[16];
 
-  String strHumi = dtostrf(humi, 4, 1, x);
-  String strTemp = dtostrf(temp, 4, 1, x);
+        String strHumi = dtostrf(humi_read, 4, 1, x);
+        String strTemp = dtostrf(temp_read, 4, 1, x);
+        String strTime = String(value_read);
+      
+        String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
+        cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+        cmd += ",1,";
+        cmd += "\"mac=111133335555&sig=-40&bat=255&volt=1|2&SMODEL=RN400H2EX&";
+        cmd += "C000=";
+        cmd += strTime;
+        cmd += "|";
+        cmd += strTemp;
+        cmd +="|";
+        cmd += strHumi;
+        cmd += "|";
+        cmd += "\"";
+        esp32.println(cmd);
+        delay(300);
+      }
+      for(int j = 0; j < 1024; j++){
+        //전송 이후 내부 메모리 초기화
+        EEPROM.write(j, 0);
+      }
+    }else{//내부 메모리에 저장된 값이 없으면
+      //온습도 값 측정
+      delay(300);
+      float humi = dht.readHumidity();
+      float temp = dht.readTemperature();
 
-  lcd.setCursor(0, 0);
-  lcd.print("Humi:");
-  lcd.setCursor(6, 0);
-  lcd.print(strHumi);
-  lcd.setCursor(11, 0);
-  lcd.print("%");
-  lcd.setCursor(0, 1);
-  lcd.print("Temp:");
-  lcd.setCursor(6, 1);
-  lcd.print(strTemp);
-  lcd.setCursor(11, 1);
-  lcd.print("*C");
+      //온습도 값 전달을 위해 문자형으로 변환
+      char x[16];
 
-  t = rtc.getTime();
+      String strHumi = dtostrf(humi, 4, 1, x);
+      String strTemp = dtostrf(temp, 4, 1, x);
 
-  stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
-  uint32_t current_unix = stamp.getUnix();
-  String strTime = String(current_unix);
-  String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
-  cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
-  cmd += ",1,";
-  cmd += "\"mac=111133335555&sig=-40&bat=255&volt=1|2&SMODEL=RN400H2EX&";
-  cmd += "C000=";
-  cmd += strTime;
-  cmd += "|";
-  cmd += strTemp;
-  cmd +="|";
-  cmd += strHumi;
-  cmd += "|";
-  cmd += "\"";
+      //LCD에 온습도 값 표시
+      lcd.setCursor(0, 0);
+      lcd.print("Humi:");
+      lcd.setCursor(6, 0);
+      lcd.print(strHumi);
+      lcd.setCursor(11, 0);
+      lcd.print("%");
+      lcd.setCursor(0, 1);
+      lcd.print("Temp:");
+      lcd.setCursor(6, 1);
+      lcd.print(strTemp);
+      lcd.setCursor(11, 1);
+      lcd.print("*C");
 
-  esp32.println(cmd);
-  delay(60000);
+      //RTC모듈 시간을 UNIX 시간으로 변환
+      t = rtc.getTime();
+
+      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
+      uint32_t current_unix = stamp.getUnix();
+      String strTime = String(current_unix);
+
+      //Datain 구현
+      String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
+      cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+      cmd += ",1,";
+      cmd += "\"mac=111133335555&sig=-40&bat=255&volt=1|2&SMODEL=RN400H2EX&";
+      cmd += "C000=";
+      cmd += strTime;
+      cmd += "|";
+      cmd += strTemp;
+      cmd +="|";
+      cmd += strHumi;
+      cmd += "|";
+      cmd += "\"";
+      esp32.println(cmd);
+
+      delay(60000);//서버로 보내는 주기 1분
+    }
+  }else{//Wifi 오류가 난 경우
+    delay(300);
+    float humi = dht.readHumidity();
+    float temp = dht.readTemperature();
+
+    char x[16];
+
+    String strHumi = dtostrf(humi, 4, 1, x);
+    String strTemp = dtostrf(temp, 4, 1, x);
+      
+    lcd.setCursor(0, 0);
+    lcd.print("Humi:");
+    lcd.setCursor(6, 0);
+    lcd.print(strHumi);
+    lcd.setCursor(11, 0);
+    lcd.print("%");
+    lcd.setCursor(0, 1);
+    lcd.print("Temp:");
+    lcd.setCursor(6, 1);
+    lcd.print(strTemp);
+    lcd.setCursor(11, 1);
+    lcd.print("*C");
+    
+    t = rtc.getTime();
+
+    stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
+    uint32_t current_unix = stamp.getUnix();
+    
+    //내부 메모리에 타임스탬프, 온도, 습도 값 저장
+    for(int i = 0; i < 1013; i = i + 12){
+      EEPROM.put(i, current_unix);
+      EEPROM.put(i + 4, temp);
+      EEPROM.put(i + 8, humi);
+    }
+  }
 }
