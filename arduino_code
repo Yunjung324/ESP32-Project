@@ -118,6 +118,10 @@ void loop() {
         cmd += "\"";
         esp32.println(cmd);
         delay(300);
+
+        if(EEPROM.read(i) == 0){
+          break;
+        }
       }
       for(int j = 0; j < 1024; j++){
         //전송 이후 내부 메모리 초기화
@@ -174,38 +178,40 @@ void loop() {
       delay(60000);//서버로 보내는 주기 1분
     }
   }else{//Wifi 오류가 난 경우
-    delay(300);
-    float humi = dht.readHumidity();
-    float temp = dht.readTemperature();
-
-    char x[16];
-
-    String strHumi = dtostrf(humi, 4, 1, x);
-    String strTemp = dtostrf(temp, 4, 1, x);
-      
-    lcd.setCursor(0, 0);
-    lcd.print("Humi:");
-    lcd.setCursor(6, 0);
-    lcd.print(strHumi);
-    lcd.setCursor(11, 0);
-    lcd.print("%");
-    lcd.setCursor(0, 1);
-    lcd.print("Temp:");
-    lcd.setCursor(6, 1);
-    lcd.print(strTemp);
-    lcd.setCursor(11, 1);
-    lcd.print("*C");
-    
-    t = rtc.getTime();
-
-    stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
-    uint32_t current_unix = stamp.getUnix();
-    
-    //내부 메모리에 타임스탬프, 온도, 습도 값 저장
     for(int i = 0; i < 1013; i = i + 12){
+      delay(300);
+      float humi = dht.readHumidity();
+      float temp = dht.readTemperature();
+
+      char x[16];
+
+      String strHumi = dtostrf(humi, 4, 1, x);
+      String strTemp = dtostrf(temp, 4, 1, x);
+      
+      lcd.setCursor(0, 0);
+      lcd.print("Humi:");
+      lcd.setCursor(6, 0);
+      lcd.print(strHumi);
+      lcd.setCursor(11, 0);
+      lcd.print("%");
+      lcd.setCursor(0, 1);
+      lcd.print("Temp:");
+      lcd.setCursor(6, 1);
+      lcd.print(strTemp);
+      lcd.setCursor(11, 1);
+      lcd.print("*C");
+    
+      t = rtc.getTime();
+
+      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
+      uint32_t current_unix = stamp.getUnix();
+    
+      //내부 메모리에 타임스탬프, 온도, 습도 값 저장
       EEPROM.put(i, current_unix);
       EEPROM.put(i + 4, temp);
       EEPROM.put(i + 8, humi);
+
+      delay(60000);
     }
   }
 }
