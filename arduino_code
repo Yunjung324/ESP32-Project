@@ -93,6 +93,9 @@ void loop() {
   if(esp32.find("2")){//연결이 제대로 되어있으면
     if(EEPROM.read(0) != 0){//내부 메모리에 값이 저장되어있으면
       for(int i = 0; i < 1013; i = i + 12){
+        if(EEPROM.read(i) == 0){
+          break;
+        }
         //내부메모리에 저장된 값 전송
         EEPROM.get(i, value_read);
         EEPROM.get(i + 4, temp_read);
@@ -118,10 +121,6 @@ void loop() {
         cmd += "\"";
         esp32.println(cmd);
         delay(300);
-
-        if(EEPROM.read(i) == 0){
-          break;
-        }
       }
       for(int j = 0; j < 1024; j++){
         //전송 이후 내부 메모리 초기화
