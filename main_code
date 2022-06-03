@@ -119,21 +119,20 @@ void loop() {
         esp32.println(cmd);
         delay(300);
         
-          //전송 이후 내부 메모리 초기화
-          EEPROM.write(i, 0);
-          EEPROM.write(i+1, 0);
-          EEPROM.write(i+2, 0);
-          EEPROM.write(i+3, 0);
-          EEPROM.write(i+4, 0);
-          EEPROM.write(i+5, 0);
-          EEPROM.write(i+6, 0);
-          EEPROM.write(i+7, 0);
-          EEPROM.write(i+8, 0);
-          EEPROM.write(i+9, 0);
-          EEPROM.write(i+10, 0);
-          EEPROM.write(i+11, 0);
-         
-        }
+        //전송 이후 내부 메모리 초기화
+        EEPROM.write(i, 0);
+        EEPROM.write(i+1, 0);
+        EEPROM.write(i+2, 0);
+        EEPROM.write(i+3, 0);
+        EEPROM.write(i+4, 0);
+        EEPROM.write(i+5, 0);
+        EEPROM.write(i+6, 0);
+        EEPROM.write(i+7, 0);
+        EEPROM.write(i+8, 0);
+        EEPROM.write(i+9, 0);
+        EEPROM.write(i+10, 0);
+        EEPROM.write(i+11, 0);         
+      }
       
      
       //온습도 값 측정
