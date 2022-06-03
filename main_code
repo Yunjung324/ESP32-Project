@@ -43,7 +43,7 @@ void wifitest() {
   //esp32.println("AT+CWJAP=\""+ssid+"\",\""+password+"\"");
   //delay(100);
   esp32.println("AT+CWSTATE?");
-  if (esp32.find("+CWSTATE:2")) {
+  if (esp32.find(":2")) {
     Serial.println("Wifi Conncected");
   } else {
     Serial.println("Wifi Error");
@@ -65,9 +65,9 @@ void setup() {
   delay(300);
   //Checkin 구현
   String b = "AT+HTTPCLIENT=3,0,\"";
-  b += "http://52.192.183.203/checkin.php\""; //url
+  b += "http://52.192.181.203/checkin.php\""; //url
   b += ",\"";
-  b += "http://52.192.183.203\""; //host
+  b += "http://52.192.181.203\""; //host
   b += ",\"";
   b += "/checkin.php\""; //path
   b += ",1,\""; //transport type
@@ -90,12 +90,9 @@ void loop() {
   //Wifi 연결이 제대로 되어있나 확인
   esp32.println("AT+CWSTATE?");
   delay(100);
-  if(esp32.find("+CWSTATE:2")){//연결이 제대로 되어있으면
-    if(EEPROM.get(0, value_read) != 0){//내부 메모리에 값이 저장되어있으면
-      for(int i = 0; i < 1013; i = i + 12){
-        if(EEPROM.get(i, value_read) == 0){
-          break;
-        }
+  if(esp32.find(":2")){//연결이 제대로 되어있으면
+    for(int i = 0; i < 1013; i = i + 12){
+      while(EEPROM.get(i, value_read) != 0){
         //내부메모리에 저장된 값 전송
         EEPROM.get(i, value_read);
         EEPROM.get(i + 4, temp_read);
@@ -121,12 +118,12 @@ void loop() {
         cmd += "\"";
         esp32.println(cmd);
         delay(300);
+         for(int j = 0; j < 1024; j++){
+          //전송 이후 내부 메모리 초기화
+          EEPROM.write(j, 0);
+        }
       }
-      for(int j = 0; j < 1024; j++){
-        //전송 이후 내부 메모리 초기화
-        EEPROM.write(j, 0);
-      }
-    }else{//내부 메모리에 저장된 값이 없으면
+     
       //온습도 값 측정
       delay(300);
       float humi = dht.readHumidity();
@@ -213,4 +210,5 @@ void loop() {
       delay(60000);
     }
   }
+}
 }
