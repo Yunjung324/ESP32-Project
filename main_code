@@ -65,19 +65,22 @@ void setup() {
   delay(300);
   //Checkin 구현
   String b = "AT+HTTPCLIENT=3,0,\"";
-  b += "http://52.192.181.203/checkin.php\""; //url
+  //b += "http://52.192.181.203/checkin.php\""; //테스트 서버 url
+  b += "http://dx.tapaculo365.com/v2/checkin\""; //라디오노드365 url
   b += ",\"";
-  b += "http://52.192.181.203\""; //host
+  //b += "http://52.192.181.203\""; //테스트 서버 host
+  b += "http://dx.tapaculo365.com\""; //라디오노드365 host
   b += ",\"";
-  b += "/checkin.php\""; //path
-  b += ",1,\""; //transport type
+  //b += "/checkin.php\""; //테스트 서버 path
+  b += "/v2/checkin\""; //라디오노드365 path
+  b += ",1,\""; //transport type: 1(TCP), 0(SSL)
   b += "mac=111133335555";
   b += "&ver=20170131";
   b += "&model=RN400H2PS";
   b += "&ip=192.168.100.11";
   b += "&splrate=60"; //측정 주기
   b += "&interval=60"; //서버 전송 주기
-  b += "&tags=TEMP|HUMI";
+  b += "&tags=TEMP|HUMI"; //
   b += "\""; 
   esp32.println(b);
   //내부 메모리 초기화
@@ -104,8 +107,10 @@ void loop() {
         String strTemp = dtostrf(temp_read, 4, 1, x);
         String strTime = String(value_read);
       
-        String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
-        cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+        //String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\""; //테스트 서버 url
+        String cmd = "AT+HTTPCLIENT=3,0,\"http://dx.tapaculo365.com/v2/datain\""; //라디오노드365 서버 url
+        //cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+        cmd += ",\"http://dx.tapaculo365.com\",\"/v2/datain\"";
         cmd += ",1,";
         cmd += "\"mac=111133335555&sig=-40&bat=255&volt=1|2&SMODEL=RN400H2EX&";
         cmd += "C000=";
@@ -168,8 +173,10 @@ void loop() {
       String strTime = String(current_unix);
 
       //Datain 구현
-      String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
-      cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+      //String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
+      String cmd = "AT+HTTPCLIENT=3,0,\"http://dx.tapaculo365.com/v2/datain\"";
+      //cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+      cmd += ",\"http://dx.tapaculo365.com\",\"/v2/datain\"";
       cmd += ",1,";
       cmd += "\"mac=111133335555&sig=-40&bat=255&volt=1|2&SMODEL=RN400H2EX&";
       cmd += "C000=";
