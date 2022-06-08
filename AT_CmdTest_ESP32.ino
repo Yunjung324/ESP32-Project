@@ -1,23 +1,18 @@
 #include <SoftwareSerial.h>
-SoftwareSerial soft(2,3); // 2 : RX , 3 : TX
+SoftwareSerial esp32(2,3); // 2 : RX , 3 : TX
 
 char ch;
   
 void setup() {
-  Serial.begin(115200);
-  soft.begin(115200);
+  Serial.begin(9600);
+  esp32.begin(9600);
 }
 
 void loop() {
-
-
-  if(Serial.available()){
-    ch = Serial.read();
-    soft.write(ch);
-    //Serial.write(ch);
+if(Serial.available()){
+    esp32.write(Serial.read());
   }
-  if(soft.available()){
-    Serial.write(soft.read());
+  if(esp32.available()){
+    Serial.write(esp32.read());
   }
-  //delay(1500);
 }
