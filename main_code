@@ -140,6 +140,7 @@ void loop() {
       
      
       //온습도 값 측정
+      delay(100);
       float humi = dht.readHumidity();
       float temp = dht.readTemperature();
 
