@@ -92,7 +92,6 @@ void setup() {
 void loop() {
   //Wifi 연결이 제대로 되어있나 확인
   esp32.println("AT+CWSTATE?");
-  delay(100);
   if(esp32.find(":2")){//연결이 제대로 되어있으면
     for(int i = 0; i < 1013; i = i + 12){
       while(EEPROM.get(i, value_read) != 0){//내부 메모리에 값이 있으면
@@ -122,7 +121,7 @@ void loop() {
         cmd += "|";
         cmd += "\"";
         esp32.println(cmd);
-        delay(300);
+        
         
         //전송 이후 내부 메모리 초기화
         EEPROM.write(i, 0);
@@ -141,7 +140,6 @@ void loop() {
       
      
       //온습도 값 측정
-      delay(300);
       float humi = dht.readHumidity();
       float temp = dht.readTemperature();
 
