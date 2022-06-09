@@ -216,7 +216,7 @@ void loop() {
     
       t = rtc.getTime();
 
-      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
+      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, 0);
       uint32_t current_unix = stamp.getUnix();
     
       //내부 메모리에 타임스탬프, 온도, 습도 값 저장
