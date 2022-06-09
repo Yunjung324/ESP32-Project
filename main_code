@@ -167,7 +167,7 @@ void loop() {
       //RTC모듈 시간을 UNIX 시간으로 변환
       t = rtc.getTime();
 
-      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, t.sec);
+      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, 0);
       uint32_t current_unix = stamp.getUnix();
       String strTime = String(current_unix);
 
