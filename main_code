@@ -1,0 +1,230 @@
+#include <SoftwareSerial.h>
+#include <LiquidCrystal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <DHT.h>
+#include <DS1302.h>
+#include <TimeLib.h>
+#include <UnixTime.h>
+#include <EEPROM.h>
+
+#define DHTTYPE DHT22
+
+SoftwareSerial esp32(2, 3);
+DHT dht(13, DHTTYPE);
+LiquidCrystal lcd(4, 5, 8, 9, 10, 11);
+DS1302 rtc(6,7,12); //rst, dat, clk
+UnixTime stamp(3);
+
+Time t;
+
+const String ssid = "iptime";
+const String password = "";
+
+uint32_t value_read;
+float temp_read;
+float humi_read;
+  
+//AT 명령어 작동 테스트
+void cmdtest() {
+  esp32.println("AT");
+
+  if (esp32.find("OK")) {
+    Serial.println("Test Success");
+  } else if (esp32.find("ERROR")) {
+    Serial.println("Test Error");
+  }
+}
+
+//Esp32 모듈 Wifi 연결
+void wifitest() {
+  //esp32.println("AT+CWMODE=1");
+  //delay(100);
+  //esp32.println("AT+CWJAP=\""+ssid+"\",\""+password+"\"");
+  //delay(100);
+  esp32.println("AT+CWSTATE?");
+  if (esp32.find(":2")) {
+    Serial.println("Wifi Conncected");
+  } else {
+    Serial.println("Wifi Error");
+  }
+}
+
+void setup() {
+  rtc.halt(false);
+  rtc.writeProtect(true);
+  //rtc.setDate(28,5,2022);
+  //rtc.setTime(15,53,16);
+  dht.begin();
+  lcd.begin(16,2);
+  Serial.begin(9600);
+  esp32.begin(9600);
+  cmdtest();
+  delay(300);
+  wifitest();
+  delay(300);
+  //Checkin 구현
+  String b = "AT+HTTPCLIENT=3,0,\"";
+  //b += "http://52.192.181.203/checkin.php\""; //테스트 서버 url
+  b += "http://dx.tapaculo365.com/v2/checkin\""; //라디오노드365 url
+  b += ",\"";
+  //b += "http://52.192.181.203\""; //테스트 서버 host
+  b += "http://dx.tapaculo365.com\""; //라디오노드365 host
+  b += ",\"";
+  //b += "/checkin.php\""; //테스트 서버 path
+  b += "/v2/checkin\""; //라디오노드365 path
+  b += ",1,\""; //transport type: 1(TCP), 0(SSL)
+  b += "mac=111133335555";
+  b += "&ver=20170131";
+  b += "&model=RN400H2PS";
+  b += "&ip=192.168.100.11";
+  b += "&splrate=60"; //측정 주기
+  b += "&interval=60"; //서버 전송 주기
+  b += "&tags=TEMP|HUMI"; //
+  b += "\""; 
+  esp32.println(b);
+  //내부 메모리 초기화
+  for(int i = 0; i < 1024; i++){
+    //EEPROM.write(i, 0);
+  }
+}
+
+void loop() {
+  //Wifi 연결이 제대로 되어있나 확인
+  esp32.println("AT+CWSTATE?");
+  if(esp32.find(":2")){//연결이 제대로 되어있으면
+    for(int i = 0; i < 1013; i = i + 12){
+      while(EEPROM.get(i, value_read) != 0){//내부 메모리에 값이 있으면
+        //내부메모리에 저장된 값 전송
+        EEPROM.get(i, value_read);
+        EEPROM.get(i + 4, temp_read);
+        EEPROM.get(i + 8, humi_read);
+
+        char x[16];
+
+        String strHumi = dtostrf(humi_read, 4, 1, x);
+        String strTemp = dtostrf(temp_read, 4, 1, x);
+        String strTime = String(value_read);
+      
+        //String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\""; //테스트 서버 url
+        String cmd = "AT+HTTPCLIENT=3,0,\"http://dx.tapaculo365.com/v2/datain\""; //라디오노드365 서버 url
+        //cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+        cmd += ",\"http://dx.tapaculo365.com\",\"/v2/datain\"";
+        cmd += ",1,";
+        cmd += "\"mac=111133335555&sig=-40&bat=255&volt=1|2&SMODEL=RN400H2EX&";
+        cmd += "C000=";
+        cmd += strTime;
+        cmd += "|";
+        cmd += strTemp;
+        cmd +="|";
+        cmd += strHumi;
+        cmd += "|";
+        cmd += "\"";
+        esp32.println(cmd);
+        
+        
+        //전송 이후 내부 메모리 초기화
+        EEPROM.write(i, 0);
+        EEPROM.write(i+1, 0);
+        EEPROM.write(i+2, 0);
+        EEPROM.write(i+3, 0);
+        EEPROM.write(i+4, 0);
+        EEPROM.write(i+5, 0);
+        EEPROM.write(i+6, 0);
+        EEPROM.write(i+7, 0);
+        EEPROM.write(i+8, 0);
+        EEPROM.write(i+9, 0);
+        EEPROM.write(i+10, 0);
+        EEPROM.write(i+11, 0);         
+      }
+      
+     
+      //온습도 값 측정
+      delay(100);
+      float humi = dht.readHumidity();
+      float temp = dht.readTemperature();
+
+      //온습도 값 전달을 위해 문자형으로 변환
+      char x[16];
+
+      String strHumi = dtostrf(humi, 4, 1, x);
+      String strTemp = dtostrf(temp, 4, 1, x);
+
+      //LCD에 온습도 값 표시
+      lcd.setCursor(0, 0);
+      lcd.print("Humi:");
+      lcd.setCursor(6, 0);
+      lcd.print(strHumi);
+      lcd.setCursor(11, 0);
+      lcd.print("%");
+      lcd.setCursor(0, 1);
+      lcd.print("Temp:");
+      lcd.setCursor(6, 1);
+      lcd.print(strTemp);
+      lcd.setCursor(11, 1);
+      lcd.print("*C");
+
+      //RTC모듈 시간을 UNIX 시간으로 변환
+      t = rtc.getTime();
+
+      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, 0);
+      uint32_t current_unix = stamp.getUnix();
+      String strTime = String(current_unix);
+
+      //Datain 구현
+      //String cmd = "AT+HTTPCLIENT=3,0,\"http://52.192.181.203/datain.php\"";
+      String cmd = "AT+HTTPCLIENT=3,0,\"http://dx.tapaculo365.com/v2/datain\"";
+      //cmd += ",\"http://52.192.181.203\",\"/datain.php\"";
+      cmd += ",\"http://dx.tapaculo365.com\",\"/v2/datain\"";
+      cmd += ",1,";
+      cmd += "\"mac=111133335555&sig=-40&bat=255&volt=1|2&SMODEL=RN400H2EX&";
+      cmd += "C000=";
+      cmd += strTime;
+      cmd += "|";
+      cmd += strTemp;
+      cmd +="|";
+      cmd += strHumi;
+      cmd += "|";
+      cmd += "\"";
+      esp32.println(cmd);
+
+      delay(60000);//서버로 보내는 주기 1분
+    }
+  }else{//Wifi 오류가 난 경우
+    for(int i = 0; i < 1013; i = i + 12){
+      delay(100);
+      float humi = dht.readHumidity();
+      float temp = dht.readTemperature();
+
+      char x[16];
+
+      String strHumi = dtostrf(humi, 4, 1, x);
+      String strTemp = dtostrf(temp, 4, 1, x);
+      
+      lcd.setCursor(0, 0);
+      lcd.print("Humi:");
+      lcd.setCursor(6, 0);
+      lcd.print(strHumi);
+      lcd.setCursor(11, 0);
+      lcd.print("%");
+      lcd.setCursor(0, 1);
+      lcd.print("Temp:");
+      lcd.setCursor(6, 1);
+      lcd.print(strTemp);
+      lcd.setCursor(11, 1);
+      lcd.print("*C");
+    
+      t = rtc.getTime();
+
+      stamp.setDateTime(t.year, t.mon, t.date, t.hour - 6, t.min, 0);
+      uint32_t current_unix = stamp.getUnix();
+    
+      //내부 메모리에 타임스탬프, 온도, 습도 값 저장
+      EEPROM.put(i, current_unix);
+      EEPROM.put(i + 4, temp);
+      EEPROM.put(i + 8, humi);
+
+      delay(60000);
+    }
+  }
+}
